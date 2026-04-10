@@ -14,7 +14,6 @@ class CurrencyProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      // Using free open.er-api.com
       final response = await http.get(
         Uri.parse('https://open.er-api.com/v6/latest/$base'),
       );
