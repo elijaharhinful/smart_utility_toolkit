@@ -24,4 +24,14 @@ dependencies:
   
   # Icons
   cupertino_icons: ^1.0.6
-  google_fonts: ^6.2.1
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: fonts/Poppins-Regular.ttf
+        - asset: fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: fonts/Poppins-Bold.ttf
+          weight: 700
