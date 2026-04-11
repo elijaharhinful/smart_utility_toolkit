@@ -81,16 +81,19 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.1,
+                child: Scrollbar(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1.1,
+                        ),
+                    itemCount: tools.length,
+                    itemBuilder: (context, index) =>
+                        _ToolCard(tool: tools[index]),
                   ),
-                  itemCount: tools.length,
-                  itemBuilder: (context, index) =>
-                      _ToolCard(tool: tools[index]),
                 ),
               ),
             ],
