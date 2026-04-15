@@ -449,7 +449,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
           value: value,
           isExpanded: true,
           style: const TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppTheme.dark,

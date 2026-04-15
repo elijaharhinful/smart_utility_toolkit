@@ -67,7 +67,7 @@ class HomeScreen extends StatelessWidget {
                     TextSpan(
                       text: 'Nex',
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'JakartaSans',
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.dark,
@@ -76,7 +76,7 @@ class HomeScreen extends StatelessWidget {
                     TextSpan(
                       text: 'Kit',
                       style: TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'JakartaSans',
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primary,

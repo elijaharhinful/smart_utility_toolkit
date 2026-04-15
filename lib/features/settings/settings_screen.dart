@@ -61,7 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: _defaultCurrency,
                       isExpanded: true,
                       style: const TextStyle(
-                        fontFamily: 'Poppins',
+                        fontFamily: 'Inter',
                         fontSize: 14,
                         color: AppTheme.dark,
                       ),
