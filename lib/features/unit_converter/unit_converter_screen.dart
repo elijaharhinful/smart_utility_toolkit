@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/theme/app_theme.dart';
 
 class UnitConverterScreen extends StatefulWidget {
   final String initialCategory;
@@ -10,41 +11,39 @@ class UnitConverterScreen extends StatefulWidget {
 }
 
 class _UnitConverterScreenState extends State<UnitConverterScreen> {
-  late String _selectedCategory;
-  late String _fromUnit;
-  late String _toUnit;
+  late String _fromUnit, _toUnit;
   final _inputController = TextEditingController();
   String _result = '';
+  String _rateLabel = '';
+  final List<Map<String, String>> _history = [];
 
   final Map<String, Map<String, double>> _conversions = {
     'Length': {
-      'Meter': 1,
-      'Kilometer': 0.001,
-      'Centimeter': 100,
-      'Millimeter': 1000,
-      'Mile': 0.000621371,
-      'Yard': 1.09361,
-      'Foot': 3.28084,
-      'Inch': 39.3701,
-      'Nautical Mile': 0.000539957,
+      'Meter (m)': 1,
+      'Kilometer (km)': 0.001,
+      'Centimeter (cm)': 100,
+      'Millimeter (mm)': 1000,
+      'Mile (mi)': 0.000621371,
+      'Yard (yd)': 1.09361,
+      'Foot (ft)': 3.28084,
+      'Inch (in)': 39.3701,
     },
     'Weight': {
-      'Kilogram': 1,
-      'Gram': 1000,
-      'Milligram': 1000000,
-      'Pound': 2.20462,
-      'Ounce': 35.274,
-      'Ton (metric)': 0.001,
-      'Stone': 0.157473,
+      'Kilogram (kg)': 1,
+      'Gram (g)': 1000,
+      'Milligram (mg)': 1000000,
+      'Pound (lb)': 2.20462,
+      'Ounce (oz)': 35.274,
+      'Ton': 0.001,
+      'Stone (st)': 0.157473,
     },
-    'Temperature': {'Celsius': 1, 'Fahrenheit': 1, 'Kelvin': 1},
+    'Temperature': {'Celsius (°C)': 1, 'Fahrenheit (°F)': 1, 'Kelvin (K)': 1},
     'Area': {
-      'Square Meter': 1,
-      'Square Kilometer': 0.000001,
+      'Square Meter (m²)': 1,
+      'Square Kilometer (km²)': 0.000001,
       'Square Mile': 3.861e-7,
-      'Square Foot': 10.7639,
-      'Square Inch': 1550,
-      'Hectare': 0.0001,
+      'Square Foot (ft²)': 10.7639,
+      'Hectare (ha)': 0.0001,
       'Acre': 0.000247105,
     },
     'Speed': {
@@ -55,81 +54,101 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
       'ft/s': 3.28084,
     },
     'Volume': {
-      'Liter': 1,
-      'Milliliter': 1000,
-      'Cubic Meter': 0.001,
+      'Liter (L)': 1,
+      'Milliliter (mL)': 1000,
+      'Cubic Meter (m³)': 0.001,
       'Gallon (US)': 0.264172,
-      'Gallon (UK)': 0.219969,
-      'Fluid Ounce': 33.814,
+      'Fluid Ounce (fl oz)': 33.814,
       'Cup': 4.22675,
-      'Pint': 2.11338,
-      'Quart': 1.05669,
+      'Pint (pt)': 2.11338,
     },
   };
+
+  List<String> get _units =>
+      _conversions[widget.initialCategory]!.keys.toList();
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.initialCategory;
     _fromUnit = _units.first;
     _toUnit = _units.length > 1 ? _units[1] : _units.first;
   }
 
-  List<String> get _units => _conversions[_selectedCategory]!.keys.toList();
-
   void _convert() {
     final input = double.tryParse(_inputController.text);
     if (input == null) {
-      setState(() => _result = '');
+      setState(() {
+        _result = '';
+        _rateLabel = '';
+      });
       return;
     }
 
     double result;
-    if (_selectedCategory == 'Temperature') {
-      result = _convertTemperature(input, _fromUnit, _toUnit);
+    if (widget.initialCategory == 'Temperature') {
+      result = _convertTemp(input, _fromUnit, _toUnit);
     } else {
-      final inBase = input / _conversions[_selectedCategory]![_fromUnit]!;
-      result = inBase * _conversions[_selectedCategory]![_toUnit]!;
+      final base = input / _conversions[widget.initialCategory]![_fromUnit]!;
+      result = base * _conversions[widget.initialCategory]![_toUnit]!;
     }
 
-    // Clean up trailing zeros
-    String formatted = result.toStringAsFixed(6);
-    if (formatted.contains('.')) {
-      formatted = formatted
+    String fmt(double v) {
+      if (v == v.roundToDouble()) return v.toInt().toString();
+      return v
+          .toStringAsFixed(6)
           .replaceAll(RegExp(r'0+$'), '')
           .replaceAll(RegExp(r'\.$'), '');
     }
-    setState(() => _result = '$formatted $_toUnit');
-  }
 
-  double _convertTemperature(double value, String from, String to) {
-    double celsius;
-    switch (from) {
-      case 'Fahrenheit':
-        celsius = (value - 32) * 5 / 9;
-        break;
-      case 'Kelvin':
-        celsius = value - 273.15;
-        break;
-      default:
-        celsius = value;
+    // Rate label
+    double rate;
+    if (widget.initialCategory == 'Temperature') {
+      rate = _convertTemp(1, _fromUnit, _toUnit);
+    } else {
+      rate =
+          _conversions[widget.initialCategory]![_toUnit]! /
+          _conversions[widget.initialCategory]![_fromUnit]!;
     }
-    switch (to) {
-      case 'Fahrenheit':
-        return celsius * 9 / 5 + 32;
-      case 'Kelvin':
-        return celsius + 273.15;
-      default:
-        return celsius;
-    }
-  }
 
-  void _swap() {
+    // final fromShort = _fromUnit.contains('(')
+    //     ? _fromUnit.split('(')[1].replaceAll(')', '')
+    //     : _fromUnit;
+    // final toShort = _toUnit.contains('(')
+    //     ? _toUnit.split('(')[1].replaceAll(')', '')
+    //     : _toUnit;
+
     setState(() {
-      final tmp = _fromUnit;
-      _fromUnit = _toUnit;
-      _toUnit = tmp;
-      _convert();
+      _result = fmt(result);
+      _rateLabel =
+          '1 ${_fromUnit.split(' ').first} = ${fmt(rate)} ${_toUnit.split(' ').first}';
+    });
+  }
+
+  double _convertTemp(double v, String from, String to) {
+    double c;
+    if (from.contains('°F')) {
+      c = (v - 32) * 5 / 9;
+    } else if (from.contains('K')) {
+      c = v - 273.15;
+    } else {
+      c = v;
+    }
+    if (to.contains('°F')) return c * 9 / 5 + 32;
+    if (to.contains('K')) return c + 273.15;
+    return c;
+  }
+
+  void _saveToHistory() {
+    if (_result.isEmpty || _inputController.text.isEmpty) return;
+    final from = _fromUnit.split(' ').first;
+    final to = _toUnit.split(' ').first;
+    final entry = {
+      'label': '${_inputController.text} $from to $to',
+      'result': '$_result $to',
+    };
+    setState(() {
+      _history.insert(0, entry);
+      if (_history.length > 5) _history.removeLast();
     });
   }
 
@@ -141,49 +160,77 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final toShort = _toUnit.contains('(')
+        ? _toUnit.split('(')[1].replaceAll(')', '')
+        : _toUnit;
 
     return Scaffold(
-      appBar: AppBar(title: Text('$_selectedCategory Converter')),
+      appBar: AppBar(title: Text('${widget.initialCategory} Converter')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Input field
-            TextField(
-              controller: _inputController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
+            // Input
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[-0-9.]')),
-              ],
-              decoration: InputDecoration(
-                labelText: 'Enter value',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: TextField(
+                controller: _inputController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
                 ),
-                filled: true,
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _inputController.clear();
-                    setState(() => _result = '');
-                  },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[-0-9.]')),
+                ],
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
                 ),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '0',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade300,
+                    fontSize: 20,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: AppTheme.textSecondary,
+                    ),
+                    onPressed: () {
+                      _inputController.clear();
+                      setState(() {
+                        _result = '';
+                        _rateLabel = '';
+                      });
+                    },
+                  ),
+                ),
+                onChanged: (_) => _convert(),
+                onEditingComplete: _saveToHistory,
               ),
-              onChanged: (_) => _convert(),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // From / Swap / To
             Row(
               children: [
                 Expanded(
                   child: _buildDropdown(
-                    'From',
                     _fromUnit,
                     (v) => setState(() {
                       _fromUnit = v!;
@@ -192,16 +239,30 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: IconButton.filled(
-                    onPressed: _swap,
-                    icon: const Icon(Icons.swap_horiz),
-                    tooltip: 'Swap',
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: GestureDetector(
+                    onTap: () => setState(() {
+                      final t = _fromUnit;
+                      _fromUnit = _toUnit;
+                      _toUnit = t;
+                      _convert();
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.swap_horiz,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(
                   child: _buildDropdown(
-                    'To',
                     _toUnit,
                     (v) => setState(() {
                       _toUnit = v!;
@@ -211,101 +272,199 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
 
-            // Result
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+            // Result card
+            Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: _result.isNotEmpty
-                    ? colorScheme.primaryContainer
-                    : colorScheme.surfaceContainerHighest,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF8EC), Color(0xFFFFF3DC)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 children: [
-                  Text(
-                    'Result',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                  const Text(
+                    'CONVERTED RESULT',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _result.isNotEmpty ? _result : '—',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _result.isEmpty ? '—' : _result,
+                        style: const TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.dark,
+                        ),
+                      ),
+                      if (_result.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            toShort,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  if (_result.isNotEmpty &&
-                      _inputController.text.isNotEmpty) ...[
+                  if (_rateLabel.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '${_inputController.text} $_fromUnit = $_result',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      textAlign: TextAlign.center,
+                      _rateLabel,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Quick reference for temperature
-            if (_selectedCategory == 'Temperature')
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // History
+            if (_history.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Row(
+                children: const [
+                  Icon(
+                    Icons.history_rounded,
+                    color: AppTheme.primary,
+                    size: 18,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Recent History',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ..._history.asMap().entries.map(
+                (e) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        'Quick Reference',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.iconBg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.straighten_rounded,
+                          size: 16,
+                          color: AppTheme.primary,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text('Water freezes: 0°C = 32°F = 273.15K'),
-                      const Text('Body temp:    37°C = 98.6°F = 310.15K'),
-                      const Text('Water boils:  100°C = 212°F = 373.15K'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              e.value['label']!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.dark,
+                              ),
+                            ),
+                            Text(
+                              e.value['result']!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _history.removeAt(e.key)),
+                        child: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: AppTheme.danger,
+                          size: 18,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDropdown(
-    String label,
-    String value,
-    ValueChanged<String?> onChanged,
-  ) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
+  Widget _buildDropdown(String value, ValueChanged<String?> onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
+        ],
       ),
-      items: _units
-          .map(
-            (u) => DropdownMenuItem(
-              value: u,
-              child: Text(u, overflow: TextOverflow.ellipsis),
-            ),
-          )
-          .toList(),
-      onChanged: onChanged,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.dark,
+          ),
+          items: _units
+              .map(
+                (u) => DropdownMenuItem(
+                  value: u,
+                  child: Text(u, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }

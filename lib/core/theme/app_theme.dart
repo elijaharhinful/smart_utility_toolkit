@@ -1,43 +1,39 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _primary = Color(0xFF6C63FF);
-  static const _secondary = Color(0xFF03DAC6);
-  static const _fontFamily = 'Poppins';
+  static const primary = Color(0xFFE8A020);
+  static const dark = Color(0xFF1E1E32);
+  static const background = Color(0xFFF4F4F4);
+  static const cardBg = Color(0xFFFFFFFF);
+  static const textSecondary = Color(0xFF64748B);
+  static const danger = Color(0xFFEF4444);
+  static const iconBg = Color(0xFFFFF3DC);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
+    scaffoldBackgroundColor: background,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: _primary,
-      secondary: _secondary,
+      seedColor: primary,
+      primary: primary,
+      surface: background,
     ),
-    fontFamily: _fontFamily,
-    appBarTheme: AppBarTheme(
-      centerTitle: true,
+    fontFamily: 'Poppins',
+    appBarTheme: const AppBarTheme(
+      backgroundColor: background,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
+      centerTitle: true,
       titleTextStyle: TextStyle(
-        fontFamily: _fontFamily,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
+        fontFamily: 'Poppins',
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: dark,
       ),
+      iconTheme: IconThemeData(color: primary),
     ),
     cardTheme: CardThemeData(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
-  );
-
-  static ThemeData darkTheme = ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: _primary,
-      secondary: _secondary,
-      brightness: Brightness.dark,
-    ),
-    fontFamily: _fontFamily,
-    cardTheme: CardThemeData(
-      elevation: 2,
+      color: cardBg,
+      elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
   );

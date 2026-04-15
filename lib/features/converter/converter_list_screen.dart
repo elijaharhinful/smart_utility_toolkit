@@ -2,55 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class ConverterListScreen extends StatelessWidget {
+  const ConverterListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final tools = [
-      _Tool(
+    final items = [
+      _Item(
         'Length',
         'Convert distances',
         Icons.straighten_rounded,
         '/converter/Length',
       ),
-      _Tool(
+      _Item(
         'Weight',
         'Convert mass',
         Icons.monitor_weight_outlined,
         '/converter/Weight',
       ),
-      _Tool(
+      _Item(
         'Temperature',
         'Convert temps',
         Icons.thermostat_rounded,
         '/converter/Temperature',
       ),
-      _Tool(
+      _Item(
         'Area',
-        'Convert areas',
+        'Covert areas',
         Icons.square_foot_rounded,
         '/converter/Area',
       ),
-      _Tool(
+      _Item(
         'Speed',
         'Convert velocity',
         Icons.speed_rounded,
         '/converter/Speed',
       ),
-      _Tool(
+      _Item(
         'Volume',
         'Convert capacity',
         Icons.water_drop_outlined,
         '/converter/Volume',
       ),
-      _Tool(
+      _Item(
         'Currency',
         'Exchange rates',
         Icons.currency_exchange_rounded,
         '/currency',
       ),
-      _Tool('Tasks', 'Quick Checklist', Icons.checklist_rounded, '/tasks'),
     ];
 
     return Scaffold(
@@ -61,56 +60,27 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
-              RichText(
-                text: const TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Nex',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.dark,
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'Kit',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const Text(
-                'Smart Utility Toolkit',
+                'Converters',
                 style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.dark,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Expanded(
-                child: Scrollbar(
-                  thumbVisibility: true,
-                  child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 1.2,
-                        ),
-                    itemCount: tools.length,
-                    itemBuilder: (_, i) => _ToolCard(tool: tools[i]),
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 1.15,
                   ),
+                  itemCount: items.length,
+                  itemBuilder: (_, i) => _ConverterCard(item: items[i]),
                 ),
               ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -119,20 +89,20 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _Tool {
+class _Item {
   final String title, subtitle, route;
   final IconData icon;
-  const _Tool(this.title, this.subtitle, this.icon, this.route);
+  const _Item(this.title, this.subtitle, this.icon, this.route);
 }
 
-class _ToolCard extends StatelessWidget {
-  final _Tool tool;
-  const _ToolCard({required this.tool});
+class _ConverterCard extends StatelessWidget {
+  final _Item item;
+  const _ConverterCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.push(tool.route),
+      onTap: () => context.push(item.route),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -155,11 +125,11 @@ class _ToolCard extends StatelessWidget {
                 color: AppTheme.iconBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(tool.icon, color: AppTheme.primary, size: 24),
+              child: Icon(item.icon, color: AppTheme.primary, size: 24),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
             Text(
-              tool.title,
+              item.title,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -168,7 +138,7 @@ class _ToolCard extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              tool.subtitle,
+              item.subtitle,
               style: const TextStyle(
                 fontSize: 12,
                 color: AppTheme.textSecondary,
