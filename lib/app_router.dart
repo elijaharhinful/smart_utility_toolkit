@@ -1,3 +1,4 @@
+// lib/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'features/shell/app_shell.dart';
@@ -17,21 +18,21 @@ final appRouter = GoRouter(
       navigatorKey: _shellKey,
       builder: (context, state, child) => AppShell(child: child),
       routes: [
-        GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+        GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
         GoRoute(
           path: '/converter',
-          builder: (_, _) => const ConverterListScreen(),
+          builder: (_, __) => const ConverterListScreen(),
         ),
-        GoRoute(path: '/tasks', builder: (_, _) => const TasksScreen()),
-        GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+        GoRoute(
+          path: '/converter/:category',
+          builder: (context, state) => UnitConverterScreen(
+            initialCategory: state.pathParameters['category']!,
+          ),
+        ),
+        GoRoute(path: '/currency', builder: (_, __) => const CurrencyScreen()),
+        GoRoute(path: '/tasks', builder: (_, __) => const TasksScreen()),
+        GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       ],
     ),
-    GoRoute(
-      path: '/converter/:category',
-      builder: (context, state) => UnitConverterScreen(
-        initialCategory: state.pathParameters['category']!,
-      ),
-    ),
-    GoRoute(path: '/currency', builder: (_, _) => const CurrencyScreen()),
   ],
 );

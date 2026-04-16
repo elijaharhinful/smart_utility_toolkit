@@ -25,7 +25,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
       'Millimeter (mm)': 1000,
       'Mile (mi)': 0.000621371,
       'Yard (yd)': 1.09361,
-      'Foot (ft)': 3.28084,
+      'Feet (ft)': 3.28084,
       'Inch (in)': 39.3701,
     },
     'Weight': {
@@ -110,17 +110,29 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
           _conversions[widget.initialCategory]![_fromUnit]!;
     }
 
-    // final fromShort = _fromUnit.contains('(')
-    //     ? _fromUnit.split('(')[1].replaceAll(')', '')
-    //     : _fromUnit;
-    // final toShort = _toUnit.contains('(')
-    //     ? _toUnit.split('(')[1].replaceAll(')', '')
-    //     : _toUnit;
+    final resultStr = fmt(result);
+    final rateStr =
+        '1 ${_fromUnit.split(' ').first} = ${fmt(rate)} ${_toUnit.split(' ').first}';
+
+    // Auto-save to history when input ends with a digit (not mid-typing)
+    final rawInput = _inputController.text;
+    if (rawInput.isNotEmpty && RegExp(r'\d$').hasMatch(rawInput)) {
+      final from = _fromUnit.split(' ').first;
+      final to = _toUnit.split(' ').first;
+      final entry = {
+        'label': '$rawInput $from to $to',
+        'result': '$resultStr $to',
+      };
+      // Only add if different from last entry
+      if (_history.isEmpty || _history.first['label'] != entry['label']) {
+        _history.insert(0, entry);
+        if (_history.length > 5) _history.removeLast();
+      }
+    }
 
     setState(() {
-      _result = fmt(result);
-      _rateLabel =
-          '1 ${_fromUnit.split(' ').first} = ${fmt(rate)} ${_toUnit.split(' ').first}';
+      _result = resultStr;
+      _rateLabel = rateStr;
     });
   }
 
@@ -175,7 +187,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -224,7 +236,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                 onEditingComplete: _saveToHistory,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
             // From / Swap / To
             Row(
@@ -272,28 +284,24 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
             // Result card
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFF8EC), Color(0xFFFFF3DC)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
+                color: AppTheme.cardBg,
+                borderRadius: BorderRadius.circular(32),
               ),
               child: Column(
                 children: [
                   const Text(
                     'CONVERTED RESULT',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
-                      letterSpacing: 1.2,
+                      color: AppTheme.colorAlternative5,
+                      letterSpacing: 2.4,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -304,8 +312,9 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                       Text(
                         _result.isEmpty ? '—' : _result,
                         style: const TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w800,
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 60,
+                          fontWeight: FontWeight.w900,
                           color: AppTheme.dark,
                         ),
                       ),
@@ -317,8 +326,8 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                             toShort,
                             style: const TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primary,
                             ),
                           ),
                         ),
@@ -330,8 +339,9 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                     Text(
                       _rateLabel,
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.colorAlternative1,
                       ),
                     ),
                   ],

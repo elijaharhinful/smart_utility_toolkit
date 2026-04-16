@@ -10,6 +10,7 @@ class AppTheme {
   static const colorAlternative2 = Color(0xFF514534);
   static const colorAlternative3 = Color(0xFFB45309);
   static const colorAlternative4 = Color(0xFFB91C1C);
+  static const colorAlternative5 = Color(0xFF847562);
   static const danger = Color(0xFFEF4444);
   static const iconBg = Color(0xFFFFF3DC);
 
