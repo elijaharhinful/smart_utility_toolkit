@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
-
+import 'package:provider/provider.dart';
+import '../history/conversion_history_provider.dart';
 class UnitConverterScreen extends StatefulWidget {
   final String initialCategory;
   const UnitConverterScreen({super.key, required this.initialCategory});
@@ -15,8 +16,6 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
   final _inputController = TextEditingController();
   String _result = '';
   String _rateLabel = '';
-  final List<Map<String, String>> _history = [];
-
   final Map<String, Map<String, double>> _conversions = {
     'Length': {
       'Meter (m)': 1,
@@ -119,15 +118,11 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
     if (rawInput.isNotEmpty && RegExp(r'\d$').hasMatch(rawInput)) {
       final from = _fromUnit.split(' ').first;
       final to = _toUnit.split(' ').first;
-      final entry = {
-        'label': '$rawInput $from to $to',
-        'result': '$resultStr $to',
-      };
-      // Only add if different from last entry
-      if (_history.isEmpty || _history.first['label'] != entry['label']) {
-        _history.insert(0, entry);
-        if (_history.length > 5) _history.removeLast();
-      }
+      context.read<ConversionHistoryProvider>().add(
+        label: '$rawInput $from to $to',
+        result: '$resultStr $to',
+        iconType: 'unit',
+      );
     }
 
     setState(() {
@@ -150,19 +145,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
     return c;
   }
 
-  void _saveToHistory() {
-    if (_result.isEmpty || _inputController.text.isEmpty) return;
-    final from = _fromUnit.split(' ').first;
-    final to = _toUnit.split(' ').first;
-    final entry = {
-      'label': '${_inputController.text} $from to $to',
-      'result': '$_result $to',
-    };
-    setState(() {
-      _history.insert(0, entry);
-      if (_history.length > 5) _history.removeLast();
-    });
-  }
+
 
   @override
   void dispose() {
@@ -175,6 +158,9 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
     final toShort = _toUnit.contains('(')
         ? _toUnit.split('(')[1].replaceAll(')', '')
         : _toUnit;
+
+    final history = context.watch<ConversionHistoryProvider>()
+        .all.where((e) => e.iconType == 'unit').toList();
 
     return Scaffold(
       appBar: AppBar(title: Text('${widget.initialCategory} Converter')),
@@ -233,7 +219,6 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                   ),
                 ),
                 onChanged: (_) => _convert(),
-                onEditingComplete: _saveToHistory,
               ),
             ),
             const SizedBox(height: 40),
@@ -349,8 +334,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
               ),
             ),
 
-            // History
-            if (_history.isNotEmpty) ...[
+            if (history.isNotEmpty) ...[
               const SizedBox(height: 24),
               Row(
                 children: const [
@@ -371,7 +355,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              ..._history.asMap().entries.map(
+              ...history.map(
                 (e) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(
@@ -408,7 +392,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              e.value['label']!,
+                              e.label,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -416,7 +400,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                               ),
                             ),
                             Text(
-                              e.value['result']!,
+                              e.result,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppTheme.textSecondary,
@@ -426,7 +410,7 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => setState(() => _history.removeAt(e.key)),
+                        onTap: () => context.read<ConversionHistoryProvider>().removeEntry(e),
                         child: const Icon(
                           Icons.delete_outline_rounded,
                           color: AppTheme.danger,

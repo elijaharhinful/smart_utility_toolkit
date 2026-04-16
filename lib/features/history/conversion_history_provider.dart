@@ -97,6 +97,12 @@ class ConversionHistoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeEntry(ConversionHistoryEntry entry) {
+    _entries.remove(entry);
+    _save();
+    notifyListeners();
+  }
+
   void clear() {
     _entries.clear();
     _save();
