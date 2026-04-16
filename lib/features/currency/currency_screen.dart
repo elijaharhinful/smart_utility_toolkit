@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:auto_size_text/auto_size_text.dart';
+import '../../core/theme/app_theme.dart';
 import 'currency_provider.dart';
 import '../history/conversion_history_provider.dart';
-import '../../core/theme/app_theme.dart';
-import 'package:auto_size_text/auto_size_text.dart';
+import '../unit_converter/widgets/history_list.dart';
 
 class CurrencyScreen extends StatefulWidget {
   const CurrencyScreen({super.key});
@@ -14,9 +16,10 @@ class CurrencyScreen extends StatefulWidget {
 
 class _CurrencyScreenState extends State<CurrencyScreen> {
   String _fromCurrency = 'USD';
-  String _toCurrency = 'GHS';
+  String _toCurrency = 'EUR';
   final _inputController = TextEditingController(text: '1');
-  final List<String> _popularCurrencies = [
+
+  static const List<String> _popularCurrencies = [
     'USD',
     'EUR',
     'GBP',
@@ -42,27 +45,29 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
     );
   }
 
-  String formatResult(double value) {
-    if (value == value.truncateToDouble()) {
-      return value.toInt().toString();
-    }
+  @override
+  void dispose() {
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  String _formatResult(double value) {
+    if (value == value.truncateToDouble()) return value.toInt().toString();
     return double.parse(value.toStringAsPrecision(6)).toString();
   }
 
-  String _convert() {
-    final provider = context.read<CurrencyProvider>();
+  String _convert(CurrencyProvider provider) {
     final input = double.tryParse(_inputController.text);
     if (input == null || provider.rates.isEmpty) return '—';
     final rate = provider.rates[_toCurrency] ?? 0;
-    return formatResult(input * rate);
+    return _formatResult(input * rate);
   }
 
-  void _recordHistory() {
+  void _recordHistory(CurrencyProvider provider) {
     final text = _inputController.text;
     if (text.isEmpty || !RegExp(r'\d$').hasMatch(text)) return;
-    final result = _convert();
+    final result = _convert(provider);
     if (result == '—') return;
-    
     context.read<ConversionHistoryProvider>().add(
       label: '$text $_fromCurrency to $_toCurrency',
       result: '$result $_toCurrency',
@@ -76,210 +81,232 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
       appBar: AppBar(title: const Text('Currency Converter')),
       body: Consumer<CurrencyProvider>(
         builder: (context, provider, _) {
-          final history = context.watch<ConversionHistoryProvider>()
-              .all.where((e) => e.iconType == 'currency').toList();
+          final result = _convert(provider);
+          final rate = provider.rates[_toCurrency];
+          final rateLabel = rate != null
+              ? '1 $_fromCurrency = ${_formatResult(rate)} $_toCurrency'
+              : '';
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (provider.error != null)
+                // Error banner
+                if (provider.error != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       provider.error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: AppTheme.danger),
                     ),
                   ),
-                TextField(
-                  controller: _inputController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  const SizedBox(height: 16),
+                ],
+
+                // Amount input
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
-                  decoration: InputDecoration(
-                    labelText: 'Amount',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: TextField(
+                    controller: _inputController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                    filled: true,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    ],
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '0',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade300,
+                        fontSize: 20,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: AppTheme.textSecondary,
+                        ),
+                        onPressed: () {
+                          _inputController.clear();
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    onChanged: (_) {
+                      setState(() {});
+                      _recordHistory(provider);
+                    },
                   ),
-                  onChanged: (_) {
-                    setState(() {});
-                    _recordHistory();
-                  },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 40),
+
+                // From and To
                 Row(
                   children: [
                     Expanded(
-                      child: _buildCurrencyDropdown('From', _fromCurrency, (v) {
-                        setState(() {
-                          _fromCurrency = v!;
-                          _recordHistory();
-                        });
+                      child: _buildDropdown(_fromCurrency, (v) {
+                        setState(() => _fromCurrency = v!);
                         provider.fetchRates(v!);
+                        _recordHistory(provider);
                       }),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: IconButton.filled(
-                        onPressed: () => setState(() {
-                          final tmp = _fromCurrency;
-                          _fromCurrency = _toCurrency;
-                          _toCurrency = tmp;
-                          _recordHistory();
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            final tmp = _fromCurrency;
+                            _fromCurrency = _toCurrency;
+                            _toCurrency = tmp;
+                          });
                           provider.fetchRates(_fromCurrency);
-                        }),
-                        icon: const Icon(Icons.swap_horiz),
+                          _recordHistory(provider);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.swap_horiz,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
                       ),
                     ),
                     Expanded(
-                      child: _buildCurrencyDropdown(
-                        'To',
-                        _toCurrency,
-                        (v) => setState(() {
-                          _toCurrency = v!;
-                          _recordHistory();
-                        }),
-                      ),
+                      child: _buildDropdown(_toCurrency, (v) {
+                        setState(() => _toCurrency = v!);
+                        _recordHistory(provider);
+                      }),
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
+
+                // Result card
                 if (provider.isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: CircularProgressIndicator(color: AppTheme.primary),
+                    ),
+                  )
                 else
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppTheme.cardBg,
+                      borderRadius: BorderRadius.circular(32),
                     ),
                     child: Column(
                       children: [
-                        Text(
-                          '${_inputController.text} $_fromCurrency =',
-                          style: Theme.of(context).textTheme.bodyLarge,
+                        const Text(
+                          'CONVERTED RESULT',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.colorAlternative5,
+                            letterSpacing: 2.4,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        AutoSizeText(
-                          '${_convert()} $_toCurrency',
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          minFontSize: 20,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Flexible(
+                              child: AutoSizeText(
+                                result.isEmpty ? '—' : result,
+                                style: const TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 60,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppTheme.dark,
+                                ),
+                                minFontSize: 20,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (result != '—') ...[
+                              const SizedBox(width: 6),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  _toCurrency,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Rate: 1 $_fromCurrency = ${provider.rates[_toCurrency]?.toStringAsFixed(4) ?? '—'} $_toCurrency',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                        ),
+                        if (rateLabel.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            rateLabel,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.colorAlternative1,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 const SizedBox(height: 16),
+
+                // Refresh Rates button
                 OutlinedButton.icon(
                   onPressed: () => provider.fetchRates(_fromCurrency),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh Rates'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: const BorderSide(color: AppTheme.colorAlternative1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text(
+                    'Refresh Rates',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
 
-                if (history.isNotEmpty) ...[
-                  const SizedBox(height: 32),
-                  Row(
-                    children: const [
-                      Icon(
-                        Icons.history_rounded,
-                        color: AppTheme.primary,
-                        size: 18,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Recent History',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ...history.map(
-                    (e) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 6,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.iconBg,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              e.icon,
-                              size: 16,
-                              color: AppTheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  e.label,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.dark,
-                                  ),
-                                ),
-                                Text(
-                                  e.result,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => context.read<ConversionHistoryProvider>().removeEntry(e),
-                            child: const Icon(
-                              Icons.delete_outline_rounded,
-                              color: AppTheme.danger,
-                              size: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                // History
+                ConverterHistoryList(iconType: 'currency'),
               ],
             ),
           );
@@ -288,22 +315,37 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
     );
   }
 
-  Widget _buildCurrencyDropdown(
-    String label,
-    String value,
-    ValueChanged<String?> onChanged,
-  ) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
+  Widget _buildDropdown(String value, ValueChanged<String?> onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
+        ],
       ),
-      items: _popularCurrencies
-          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-          .toList(),
-      onChanged: onChanged,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.dark,
+          ),
+          items: _popularCurrencies
+              .map(
+                (c) => DropdownMenuItem(
+                  value: c,
+                  child: Text(c, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }
