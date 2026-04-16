@@ -1,8 +1,8 @@
-// lib/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'features/shell/app_shell.dart';
-import 'features/home/home_screen.dart';
+import 'features/home/dashboard_screen.dart';
+import 'features/home/splash_screen.dart';
 import 'features/converter/converter_list_screen.dart';
 import 'features/unit_converter/unit_converter_screen.dart';
 import 'features/currency/currency_screen.dart';
@@ -12,13 +12,21 @@ import 'features/settings/settings_screen.dart';
 final _shellKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/splash',
   routes: [
+    GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+
     ShellRoute(
       navigatorKey: _shellKey,
       builder: (context, state, child) => AppShell(child: child),
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+        GoRoute(
+          path: '/',
+          builder: (context, state) {
+            final isFirst = state.uri.queryParameters['first'] == 'true';
+            return DashboardScreen(isFirstTime: isFirst);
+          },
+        ),
         GoRoute(
           path: '/converter',
           builder: (_, __) => const ConverterListScreen(),

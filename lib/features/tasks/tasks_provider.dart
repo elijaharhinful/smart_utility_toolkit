@@ -5,6 +5,7 @@ import 'task_model.dart';
 
 class TasksProvider extends ChangeNotifier {
   List<Task> _tasks = [];
+  List<Task> get tasks => _tasks;
   List<Task> get pending => _tasks.where((t) => !t.isCompleted).toList();
   List<Task> get completed => _tasks.where((t) => t.isCompleted).toList();
 

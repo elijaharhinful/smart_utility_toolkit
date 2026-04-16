@@ -4,6 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'features/currency/currency_provider.dart';
 import 'features/tasks/tasks_provider.dart';
 import 'app_router.dart';
+import 'features/history/conversion_history_provider.dart';
 
 void main() {
   runApp(
@@ -11,6 +12,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => TasksProvider()),
+        ChangeNotifierProvider(create: (_) => ConversionHistoryProvider()),
       ],
       child: const MyApp(),
     ),
