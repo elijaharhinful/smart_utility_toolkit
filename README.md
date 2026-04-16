@@ -94,7 +94,7 @@ flutter run
 flutter build apk --release
 # Output: build/app/outputs/flutter-apk/app-release.apk
 ```
-#### Build a smaller Release APK (Android) targetted for appetize.io
+#### Build a smaller Release APK (Android) targetted for 64-bit Android devices
 ```bash
 flutter build apk --release --target-platform android-arm64 
 #flutter build apk --release --target-platform android-x64
