@@ -14,7 +14,7 @@ final _shellKey = GlobalKey<NavigatorState>();
 final appRouter = GoRouter(
   initialLocation: '/splash',
   routes: [
-    GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+    GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
 
     ShellRoute(
       navigatorKey: _shellKey,
@@ -29,7 +29,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/converter',
-          builder: (_, __) => const ConverterListScreen(),
+          builder: (_, _) => const ConverterListScreen(),
         ),
         GoRoute(
           path: '/converter/:category',
@@ -37,9 +37,9 @@ final appRouter = GoRouter(
             initialCategory: state.pathParameters['category']!,
           ),
         ),
-        GoRoute(path: '/currency', builder: (_, __) => const CurrencyScreen()),
-        GoRoute(path: '/tasks', builder: (_, __) => const TasksScreen()),
-        GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+        GoRoute(path: '/currency', builder: (_, _) => const CurrencyScreen()),
+        GoRoute(path: '/tasks', builder: (_, _) => const TasksScreen()),
+        GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       ],
     ),
   ],

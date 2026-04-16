@@ -111,7 +111,7 @@ class _SplashScreenState extends State<SplashScreen>
               // App icon
               AnimatedBuilder(
                 animation: _controller,
-                builder: (_, __) => Opacity(
+                builder: (_, _) => Opacity(
                   opacity: _iconOpacity.value,
                   child: Transform.scale(
                     scale: _iconScale.value,
