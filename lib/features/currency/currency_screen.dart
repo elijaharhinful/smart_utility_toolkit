@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,11 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
   String _fromCurrency = 'USD';
   String _toCurrency = 'EUR';
   final _inputController = TextEditingController(text: '1');
+
+  // Debounce fields
+  Timer? _debounceTimer;
+  String? _pendingValue;
+  String? _pendingResult;
 
   static const List<String> _popularCurrencies = [
     'USD',
@@ -47,6 +53,11 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    if (_pendingValue != null && _pendingValue!.isNotEmpty) {
+      // Use the last known result so we don't need a provider reference.
+      _saveToHistory(_pendingValue!, _pendingResult ?? '');
+    }
     _inputController.dispose();
     super.dispose();
   }
@@ -63,16 +74,35 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
     return _formatResult(input * rate);
   }
 
-  void _recordHistory(CurrencyProvider provider) {
-    final text = _inputController.text;
-    if (text.isEmpty || !RegExp(r'\d$').hasMatch(text)) return;
-    final result = _convert(provider);
-    if (result == '—') return;
+  void _scheduleHistory(String text, String result) {
+    if (text.isEmpty || !RegExp(r'\d$').hasMatch(text) || result == '—') return;
+
+    _pendingValue = text;
+    _pendingResult = result;
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 1200), () {
+      _saveToHistory(_pendingValue!, _pendingResult ?? '');
+      _pendingValue = null;
+      _pendingResult = null;
+    });
+  }
+
+  void _saveToHistory(String inputValue, String resultStr) {
     context.read<ConversionHistoryProvider>().add(
-      label: '$text $_fromCurrency to $_toCurrency',
-      result: '$result $_toCurrency',
+      label: '$inputValue $_fromCurrency to $_toCurrency',
+      result: '$resultStr $_toCurrency',
       iconType: 'currency',
     );
+  }
+
+  void _flushPending() {
+    _debounceTimer?.cancel();
+    if (_pendingValue != null && _pendingValue!.isNotEmpty) {
+      _saveToHistory(_pendingValue!, _pendingResult ?? '');
+      _pendingValue = null;
+      _pendingResult = null;
+    }
   }
 
   @override
@@ -158,7 +188,8 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                     ),
                     onChanged: (_) {
                       setState(() {});
-                      _recordHistory(provider);
+                      _scheduleHistory(
+                        _inputController.text, _convert(provider));
                     },
                   ),
                 ),
@@ -169,22 +200,22 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                   children: [
                     Expanded(
                       child: _buildDropdown(_fromCurrency, (v) {
+                        _flushPending();
                         setState(() => _fromCurrency = v!);
                         provider.fetchRates(v!);
-                        _recordHistory(provider);
                       }),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: GestureDetector(
                         onTap: () {
+                          _flushPending();
                           setState(() {
                             final tmp = _fromCurrency;
                             _fromCurrency = _toCurrency;
                             _toCurrency = tmp;
                           });
                           provider.fetchRates(_fromCurrency);
-                          _recordHistory(provider);
                         },
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -202,8 +233,8 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                     ),
                     Expanded(
                       child: _buildDropdown(_toCurrency, (v) {
+                        _flushPending();
                         setState(() => _toCurrency = v!);
-                        _recordHistory(provider);
                       }),
                     ),
                   ],

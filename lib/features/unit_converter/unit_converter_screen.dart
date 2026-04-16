@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../history/conversion_history_provider.dart';
@@ -21,6 +22,11 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
   String _result = '';
   String _rateLabel = '';
 
+  // Debounce fields
+  Timer? _debounceTimer;
+  String? _pendingValue;
+  String? _pendingResult;
+
   List<String> get _units =>
       kConversions[widget.initialCategory]!.keys.toList();
 
@@ -31,9 +37,13 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
     _toUnit = _units.length > 1 ? _units[1] : _units.first;
   }
 
+  // Performs the live conversion and schedules a debounced history save.
   void _convert() {
-    final input = double.tryParse(_inputController.text);
+    final rawInput = _inputController.text;
+    final input = double.tryParse(rawInput);
+
     if (input == null) {
+      _debounceTimer?.cancel();
       setState(() {
         _result = '';
         _rateLabel = '';
@@ -58,26 +68,80 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
     final rateStr =
         '1 ${_fromUnit.split(' ').first} = ${formatUnitResult(rate)} ${_toUnit.split(' ').first}';
 
-    // Auto-save to history when input ends with a digit
-    final rawInput = _inputController.text;
-    if (rawInput.isNotEmpty && RegExp(r'\d$').hasMatch(rawInput)) {
-      final from = _fromUnit.split(' ').first;
-      final to = _toUnit.split(' ').first;
-      context.read<ConversionHistoryProvider>().add(
-        label: '$rawInput $from to $to',
-        result: '$resultStr $to',
-        iconType: 'unit',
-      );
-    }
-
+    // Update the display immediately — no debounce here.
     setState(() {
       _result = resultStr;
       _rateLabel = rateStr;
     });
+
+    // Debounce history recording.
+    if (rawInput.isNotEmpty && RegExp(r'\d$').hasMatch(rawInput)) {
+      _pendingValue = rawInput;
+      _pendingResult = resultStr;
+
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 1200), () {
+        _saveToHistory(_pendingValue!, _pendingResult ?? '');
+        _pendingValue = null;
+        _pendingResult = null;
+      });
+    }
+  }
+
+  void _saveToHistory(String inputValue, String resultStr) {
+    final from = _fromUnit.split(' ').first;
+    final to = _toUnit.split(' ').first;
+    context.read<ConversionHistoryProvider>().add(
+      label: '$inputValue $from to $to',
+      result: '$resultStr $to',
+      iconType: 'unit',
+    );
+  }
+
+  // Flush any pending history entry, then apply the unit change.
+  void _onFromUnitChanged(String? newUnit) {
+    if (newUnit == null) return;
+    _flushPending();
+    setState(() {
+      _fromUnit = newUnit;
+      _convert();
+    });
+  }
+
+  void _onToUnitChanged(String? newUnit) {
+    if (newUnit == null) return;
+    _flushPending();
+    setState(() {
+      _toUnit = newUnit;
+      _convert();
+    });
+  }
+
+  void _onSwap() {
+    _flushPending();
+    setState(() {
+      final t = _fromUnit;
+      _fromUnit = _toUnit;
+      _toUnit = t;
+      _convert();
+    });
+  }
+
+  void _flushPending() {
+    _debounceTimer?.cancel();
+    if (_pendingValue != null && _pendingValue!.isNotEmpty) {
+      _saveToHistory(_pendingValue!, _pendingResult ?? '');
+      _pendingValue = null;
+      _pendingResult = null;
+    }
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    if (_pendingValue != null && _pendingValue!.isNotEmpty) {
+      _saveToHistory(_pendingValue!, _pendingResult ?? '');
+    }
     _inputController.dispose();
     super.dispose();
   }
@@ -104,20 +168,9 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
               units: _units,
               fromUnit: _fromUnit,
               toUnit: _toUnit,
-              onFromChanged: (v) => setState(() {
-                _fromUnit = v!;
-                _convert();
-              }),
-              onToChanged: (v) => setState(() {
-                _toUnit = v!;
-                _convert();
-              }),
-              onSwap: () => setState(() {
-                final t = _fromUnit;
-                _fromUnit = _toUnit;
-                _toUnit = t;
-                _convert();
-              }),
+              onFromChanged: _onFromUnitChanged,
+              onToChanged: _onToUnitChanged,
+              onSwap: _onSwap,
             ),
             const SizedBox(height: 40),
             ResultCard(
