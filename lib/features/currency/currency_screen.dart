@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'currency_provider.dart';
 import '../history/conversion_history_provider.dart';
 import '../../core/theme/app_theme.dart';
+import 'package:auto_size_text/auto_size_text.dart';
+
 class CurrencyScreen extends StatefulWidget {
   const CurrencyScreen({super.key});
 
@@ -40,12 +42,19 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
     );
   }
 
+  String formatResult(double value) {
+    if (value == value.truncateToDouble()) {
+      return value.toInt().toString();
+    }
+    return double.parse(value.toStringAsPrecision(6)).toString();
+  }
+
   String _convert() {
     final provider = context.read<CurrencyProvider>();
     final input = double.tryParse(_inputController.text);
     if (input == null || provider.rates.isEmpty) return '—';
     final rate = provider.rates[_toCurrency] ?? 0;
-    return (input * rate).toStringAsFixed(2);
+    return formatResult(input * rate);
   }
 
   void _recordHistory() {
@@ -158,10 +167,13 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        AutoSizeText(
                           '${_convert()} $_toCurrency',
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
+                          minFontSize: 20,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
                         Text(

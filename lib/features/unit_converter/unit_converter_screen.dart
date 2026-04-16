@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../history/conversion_history_provider.dart';
 class UnitConverterScreen extends StatefulWidget {
   final String initialCategory;
@@ -73,6 +74,13 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
     _toUnit = _units.length > 1 ? _units[1] : _units.first;
   }
 
+  String formatResult(double value) {
+    if (value == value.truncateToDouble()) {
+      return value.toInt().toString();
+    }
+    return double.parse(value.toStringAsPrecision(6)).toString();
+  }
+
   void _convert() {
     final input = double.tryParse(_inputController.text);
     if (input == null) {
@@ -91,14 +99,6 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
       result = base * _conversions[widget.initialCategory]![_toUnit]!;
     }
 
-    String fmt(double v) {
-      if (v == v.roundToDouble()) return v.toInt().toString();
-      return v
-          .toStringAsFixed(6)
-          .replaceAll(RegExp(r'0+$'), '')
-          .replaceAll(RegExp(r'\.$'), '');
-    }
-
     // Rate label
     double rate;
     if (widget.initialCategory == 'Temperature') {
@@ -109,9 +109,9 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
           _conversions[widget.initialCategory]![_fromUnit]!;
     }
 
-    final resultStr = fmt(result);
+    final resultStr = formatResult(result);
     final rateStr =
-        '1 ${_fromUnit.split(' ').first} = ${fmt(rate)} ${_toUnit.split(' ').first}';
+        '1 ${_fromUnit.split(' ').first} = ${formatResult(rate)} ${_toUnit.split(' ').first}';
 
     // Auto-save to history when input ends with a digit (not mid-typing)
     final rawInput = _inputController.text;
@@ -294,13 +294,18 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        _result.isEmpty ? '—' : _result,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 60,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.dark,
+                      Flexible(
+                        child: AutoSizeText(
+                          _result.isEmpty ? '—' : _result,
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 60,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.dark,
+                          ),
+                          minFontSize: 20,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (_result.isNotEmpty) ...[
